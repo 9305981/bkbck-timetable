@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BK Birla College - Timetable System</title>
     <style>
+        /* All styling is included here for simplicity */
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f0f4f8; }
         .view { display: none; }
         .view.active { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
@@ -12,14 +13,16 @@
         .logo { font-size: 2em; font-weight: bold; color: #fff; background-color: #0056b3; border-radius: 50%; width: 80px; height: 80px; line-height: 80px; margin: 0 auto 20px auto; }
         .college-name { font-size: 2em; font-weight: 600; color: #333; }
         .department { font-size: 1.2em; color: #555; margin-bottom: 25px; }
-        .quote-box { font-style: italic; color: #666; margin: 30px 0; padding: 15px; border-left: 4px solid #007bff; background-color: #f8f9fa; }
-        .notice { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin: 30px 0; font-weight: 500; color: #8a6d3b; }
         .portals { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
         .btn { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-size: 1.1em; font-weight: bold; transition: background-color 0.3s, transform 0.2s; cursor: pointer; border: none; }
-        .btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .btn:hover { background-color: #0056b3; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-secondary { background-color: #6c757d; }
+        /* New Styles for Quote and Notice */
+        .quote-box { font-style: italic; color: #666; margin: 30px 0; padding: 15px; border-left: 4px solid #007bff; background-color: #f8f9fa; }
+        .notice { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin: 30px 0; font-weight: 500; color: #8a6d3b; }
         .footer { margin-top: 30px; font-size: 0.9em; color: #888; }
-        /* Admin & Login Styles */
+        /* Login & Admin Styles */
         .login-form input { width: 95%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }
         .error-msg { color: #d9534f; margin-bottom: 15px; font-weight: bold; }
         .status-box { width: 100%; border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px; background-color: #f9f9f9; box-sizing: border-box; }
@@ -38,6 +41,7 @@
             <div class="logo">BKB</div>
             <div class="college-name">BK Birla College, Kalyan</div>
             <div class="department">Department of Computer Science & IT</div>
+            <!-- Re-added Quote and Notice -->
             <div class="quote-box">"The future belongs to those who believe in the beauty of their dreams." <br>- Eleanor Roosevelt</div>
             <div class="notice"><strong>Important Notice:</strong> As per university guidelines, a minimum of **75% attendance** is mandatory in all subjects to be eligible for examinations.</div>
             <div class="portals">
@@ -94,61 +98,102 @@
     </div>
 
     <script>
+        // --- Global State & Configuration ---
         let currentView = 'home-view';
         let previousView = 'home-view';
-        let statusInterval;
+        let timetableData = { preview: null, published: null };
+        const STAFF_CREDENTIALS = { 'Arpita': '1234', 'Sanskriti': '1222' };
+        
+        const GA_PARAMS = {
+            POPULATION_SIZE: 150,
+            NUM_GENERATIONS: 300,
+            ELITISM_SIZE: 15,
+            DAYS: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            TIME_SLOTS: ["07:15-08:15", "08:15-09:15", "09:25-10:25", "10:25-11:25", "11:35-12:35", "12:35-13:35", "13:55-14:55", "14:55-15:55"]
+        };
+        let appData = {};
 
+        // --- View Management ---
         function showView(viewId) {
             previousView = currentView;
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             currentView = viewId;
+        }
+        function goBack() { showView(previousView); }
 
-            if (viewId === 'admin-view') {
-                checkStatus();
-                statusInterval = setInterval(checkStatus, 2000);
-            } else {
-                clearInterval(statusInterval);
-            }
+        // --- Data Loading ---
+        async function loadData() {
+            // Using a helper to fetch and parse CSV data
+            const papaParsePromise = new Promise(resolve => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js';
+                script.onload = resolve;
+                document.head.appendChild(script);
+            });
+            await papaParsePromise;
+
+            const fetchCSV = async (file) => Papa.parse(await (await fetch(`/data/${file}`)).text(), { header: true, skipEmptyLines: true }).data;
+            
+            appData.professors_df = await fetchCSV('professors.csv');
+            appData.rooms_df = await fetchCSV('rooms.csv');
+            appData.subjects_df = await fetchCSV('subjects.csv');
+            appData.student_groups_df = await fetchCSV('student_groups.csv');
+            appData.teaching_load_df = await fetchCSV('teaching_load.csv');
+            console.log("All data loaded from CSVs.");
         }
         
-        function goBack() {
-            showView(previousView);
-        }
-
-        // --- Timetable Logic ---
-        async function showTimetableView(type) {
+        // --- Timetable Display & Generation ---
+        function showTimetableView(type) {
             const contentDiv = document.getElementById('timetable-content');
-            contentDiv.innerHTML = '<h2>Loading Timetable...</h2>';
             showView('timetable-view');
-            const response = await fetch(`/api/timetable/${type}`);
-            const data = await response.json();
-            if (data.found) {
-                contentDiv.innerHTML = data.html;
+            const data = timetableData[type];
+            if (data) {
+                contentDiv.innerHTML = generateHtmlFromTimetable(data);
             } else {
                 contentDiv.innerHTML = `<div class="container"><h1>Timetable Not Available</h1><p>The requested timetable has not been generated or published yet.</p></div>`;
             }
         }
+        
+        function getGroupColor(group_id) {
+            const colors = {'TYCS': '#FFDDC1', 'SYCS': '#C1DFFF', 'FYCS': '#DBC1FF','MSCAI1': '#C1FFC1', 'MSC1': '#FFFAC1', 'SYDS': '#FFC1D8', 'FYDS': '#D6F8FF'};
+            return colors[group_id] || '#E8E8E8';
+        }
+
+        function generateHtmlFromTimetable(timetable) {
+            let html = `<h1>Master Timetable - BK BIRLA COLLEGE, KALYAN</h1>`;
+            const room_list = [...new Set(appData.rooms_df.map(r => r.room_name))].sort();
+
+            GA_PARAMS.DAYS.forEach(day => {
+                html += `<h2>${day}</h2><table><tr><th>Time Slot</th>${room_list.map(r => `<th>${r}</th>`).join('')}</tr>`;
+                GA_PARAMS.TIME_SLOTS.forEach(time_slot => {
+                    html += `<tr><td class="slot">${time_slot}</td>`;
+                    room_list.forEach(room_name => {
+                        const cls = timetable.schedule.find(c => c.day === day && c.time_slot === time_slot && c.room.room_name === room_name);
+                        if (cls) {
+                            html += `<td style="background-color: ${getGroupColor(cls.group.group_id)};"><div class="cell-content"><b>${cls.subject.subject_name}</b><br>(${cls.group.group_id})<br>${cls.professor.initials}</div></td>`;
+                        } else {
+                            html += `<td></td>`;
+                        }
+                    });
+                    html += `</tr>`;
+                });
+                html += `</table>`;
+            });
+            return html;
+        }
 
         // --- Login Logic ---
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
+        document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('login-error');
-            
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await response.json();
-            if (data.success) {
-                errorDiv.style.display = 'none';
+            if (STAFF_CREDENTIALS[username] && STAFF_CREDENTIALS[username] === password) {
+                document.getElementById('login-error').style.display = 'none';
                 showView('admin-view');
             } else {
-                errorDiv.textContent = data.message;
-                errorDiv.style.display = 'block';
+                document.getElementById('login-error').textContent = 'Invalid username or password.';
+                document.getElementById('login-error').style.display = 'block';
             }
         });
 
@@ -159,52 +204,49 @@
         const statusText = document.getElementById('status-text');
         const progressBar = document.getElementById('progress-bar');
         const progressInfo = document.getElementById('progress-info');
+        let worker;
 
-        generateBtn.addEventListener('click', async () => {
-            await fetch('/api/generate', { method: 'POST' });
-            checkStatus();
+        generateBtn.addEventListener('click', () => {
+            if (worker) worker.terminate(); // Terminate existing worker if any
+            worker = new Worker('/static/timetable_logic.js');
+            
+            worker.onmessage = (e) => {
+                if (e.data.type === 'progress') {
+                    statusText.textContent = 'Generating...';
+                    generateBtn.disabled = true;
+                    progressBar.max = e.data.total;
+                    progressBar.value = e.data.generation;
+                    progressInfo.textContent = `Generation ${e.data.generation} of ${e.data.total} | Fitness: ${e.data.fitness.toFixed(4)}`;
+                } else if (e.data.type === 'result') {
+                    timetableData.preview = e.data.timetable;
+                    statusText.textContent = 'Pending Verification';
+                    verificationPanel.style.display = 'block';
+                    generateBtn.style.display = 'none';
+                    progressInfo.textContent = 'A new timetable is ready for review.';
+                    worker.terminate();
+                }
+            };
+            
+            const params = { ...GA_PARAMS, data: appData };
+            worker.postMessage({ type: 'start', params: params });
         });
 
-        publishBtn.addEventListener('click', async () => {
-            await fetch('/api/publish', { method: 'POST' });
-            alert('Timetable Published Successfully!');
-            checkStatus();
-        });
-
-        async function checkStatus() {
-            const response = await fetch('/api/status');
-            const data = await response.json();
-
-            verificationPanel.style.display = 'none';
-            generateBtn.style.display = 'inline-block';
-
-            if (data.status === 'running') {
-                statusText.textContent = 'Generating...';
-                generateBtn.disabled = true;
-                progressBar.max = data.total;
-                progressBar.value = data.progress;
-                progressInfo.textContent = `Generation ${data.progress} of ${data.total} | Fitness: ${data.fitness}`;
-            } else if (data.status === 'pending_verification') {
-                statusText.textContent = 'Pending Verification';
+        publishBtn.addEventListener('click', () => {
+            if (timetableData.preview) {
+                timetableData.published = timetableData.preview;
+                timetableData.preview = null;
+                alert('Timetable Published Successfully!');
+                verificationPanel.style.display = 'none';
+                generateBtn.style.display = 'inline-block';
                 generateBtn.disabled = false;
-                generateBtn.style.display = 'none';
-                verificationPanel.style.display = 'block';
-                progressInfo.textContent = 'A new timetable is ready for review.';
-            } else if (data.status === 'error') {
-                 statusText.textContent = 'Error!';
-                 progressInfo.textContent = data.message;
-                 generateBtn.disabled = false;
-                 clearInterval(statusInterval);
-            } else { // idle
                 statusText.textContent = 'Idle';
-                generateBtn.disabled = false;
-                progressBar.value = 0;
                 progressInfo.textContent = 'Ready to generate a new timetable.';
             }
-        }
+        });
 
+        // --- App Initialization ---
+        window.onload = loadData;
     </script>
-
 </body>
 </html>
 
