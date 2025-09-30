@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Timetable Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f0f4f8; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .status-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px; background-color: #f9f9f9; }
+        progress { width: 100%; height: 25px; margin-bottom: 10px; }
+        .button-group { text-align: center; margin-top: 20px; }
+        button, a { background-color: #28a745; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; text-decoration: none; margin: 5px; display: inline-block; }
+        button:hover, a:hover { opacity: 0.9; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-generate { background-color: #007bff; }
+        .btn-view { background-color: #6c757d; }
+        .error { color: red; font-weight: bold; }
+        .verification-panel { display: none; margin-top: 20px; padding: 15px; background-color: #eaf7ff; border: 1px solid #b3e0ff; border-radius: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Timetable Generator - Admin Panel</h1>
+        
+        <div class="status-box" id="status-box">
+            <p><strong>Status:</strong> <span id="status-text">Idle</span></p>
+            <progress id="progress-bar" value="0" max="100"></progress>
+            <p id="progress-info"></p>
+        </div>
+
+        <div class="button-group">
+            <form action="/generate" method="post" style="display:inline;">
+                <button id="generate-btn" type="submit" class="btn-generate">Generate New Timetable</button>
+            </form>
+            <a href="/timetable" target="_blank" class="btn-view">View Published Timetable</a>
+        </div>
+
+        <div class="verification-panel" id="verification-panel">
+            <h4>Verification Required</h4>
+            <p>A new timetable has been generated. Please review it before publishing.</p>
+            <a href="/preview" target="_blank" class="btn-view">Verify Timetable</a>
+            <form action="/publish" method="post" style="display:inline;">
+                <button type="submit" id="publish-btn">Publish Timetable ✔</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const statusText = document.getElementById('status-text');
+        const progressBar = document.getElementById('progress-bar');
+        const progressInfo = document.getElementById('progress-info');
+        const generateBtn = document.getElementById('generate-btn');
+        const verificationPanel = document.getElementById('verification-panel');
+
+        function checkStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    verificationPanel.style.display = 'none'; // Hide by default
+                    generateBtn.style.display = 'inline-block';
+
+                    if (data.status === 'running') {
+                        statusText.textContent = 'Generating...';
+                        generateBtn.disabled = true;
+                        progressBar.max = data.total;
+                        progressBar.value = data.progress;
+                        progressInfo.textContent = `Generation ${data.progress} of ${data.total} | Best Fitness: ${data.fitness}`;
+                        progressInfo.classList.remove('error');
+                    } else if (data.status === 'error') {
+                        statusText.textContent = 'Error!';
+                        generateBtn.disabled = false;
+                        progressInfo.textContent = data.message;
+                        progressInfo.classList.add('error');
+                        clearInterval(interval);
+                    } else if (data.status === 'pending_verification') {
+                        statusText.textContent = 'Pending Verification';
+                        generateBtn.disabled = false;
+                        generateBtn.style.display = 'none'; // Hide generate button
+                        verificationPanel.style.display = 'block'; // Show verification panel
+                        progressInfo.textContent = 'A new timetable is ready for review.';
+                    } else { // idle
+                        statusText.textContent = 'Idle';
+                        generateBtn.disabled = false;
+                        progressBar.value = 0;
+                        progressInfo.textContent = 'Ready to generate a new timetable.';
+                        progressInfo.classList.remove('error');
+                    }
+                });
+        }
+        
+        let interval = setInterval(checkStatus, 2000); // Check status every 2 seconds
+        checkStatus(); // Initial check on page load
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK Birla College - Timetable System</title>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f0f4f8; }
+        .view { display: none; }
+        .view.active { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .container { text-align: center; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 600px; width: 90%; }
+        .logo { font-size: 2em; font-weight: bold; color: #fff; background-color: #0056b3; border-radius: 50%; width: 80px; height: 80px; line-height: 80px; margin: 0 auto 20px auto; }
+        .college-name { font-size: 2em; font-weight: 600; color: #333; }
+        .department { font-size: 1.2em; color: #555; margin-bottom: 25px; }
+        .quote-box { font-style: italic; color: #666; margin: 30px 0; padding: 15px; border-left: 4px solid #007bff; background-color: #f8f9fa; }
+        .notice { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin: 30px 0; font-weight: 500; color: #8a6d3b; }
+        .portals { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
+        .btn { display: inline-block; background-color: #007bff; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-size: 1.1em; font-weight: bold; transition: background-color 0.3s, transform 0.2s; cursor: pointer; border: none; }
+        .btn:hover { background-color: #0056b3; transform: translateY(-2px); }
+        .btn-secondary { background-color: #6c757d; }
+        .footer { margin-top: 30px; font-size: 0.9em; color: #888; }
+        /* Admin & Login Styles */
+        .login-form input { width: 95%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .error-msg { color: #d9534f; margin-bottom: 15px; font-weight: bold; }
+        .status-box { width: 100%; border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px; background-color: #f9f9f9; box-sizing: border-box; }
+        progress { width: 100%; height: 25px; margin-bottom: 10px; }
+        .verification-panel { display: none; margin-top: 20px; padding: 15px; background-color: #eaf7ff; border: 1px solid #b3e0ff; border-radius: 5px; text-align: center; }
+        /* Timetable View */
+        #timetable-content { width: 100%; }
+        .back-button { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+    <!-- HOME VIEW -->
+    <div id="home-view" class="view active">
+        <div class="container">
+            <div class="logo">BKB</div>
+            <div class="college-name">BK Birla College, Kalyan</div>
+            <div class="department">Department of Computer Science & IT</div>
+            <div class="quote-box">"The future belongs to those who believe in the beauty of their dreams." <br>- Eleanor Roosevelt</div>
+            <div class="notice"><strong>Important Notice:</strong> As per university guidelines, a minimum of **75% attendance** is mandatory in all subjects to be eligible for examinations.</div>
+            <div class="portals">
+                <button class="btn btn-secondary" onclick="showView('login-view')">Faculty Login</button>
+                <button class="btn" onclick="showTimetableView('published')">View Timetable</button>
+            </div>
+            <div class="footer">&copy; 2025 BK Birla College, Kalyan. AI Timetable System.</div>
+        </div>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="view">
+        <div class="container">
+            <h2>Faculty Admin Login</h2>
+            <form id="login-form" class="login-form">
+                <div id="login-error" class="error-msg" style="display:none;"></div>
+                <input type="text" id="username" placeholder="Username (e.g., Arpita)" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="btn">Login</button>
+            </form>
+             <button class="btn btn-secondary" onclick="showView('home-view')" style="margin-top: 20px;">← Back to Home</button>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL VIEW -->
+    <div id="admin-view" class="view">
+        <div class="container">
+            <h1>Timetable Generator - Admin Panel</h1>
+            <div class="status-box">
+                <p><strong>Status:</strong> <span id="status-text">Idle</span></p>
+                <progress id="progress-bar" value="0" max="100"></progress>
+                <p id="progress-info"></p>
+            </div>
+            <div class="portals">
+                <button id="generate-btn" class="btn">Generate New Timetable</button>
+                <button class="btn btn-secondary" onclick="showTimetableView('published')">View Published</button>
+            </div>
+            <div id="verification-panel" class="verification-panel">
+                <h4>Verification Required</h4>
+                <p>A new timetable is ready. Please review it before publishing.</p>
+                <button class="btn btn-secondary" onclick="showTimetableView('preview')">Verify</button>
+                <button id="publish-btn" class="btn">Publish ✔</button>
+            </div>
+             <button class="btn btn-secondary" onclick="showView('home-view')" style="margin-top: 20px;">Logout</button>
+        </div>
+    </div>
+
+    <!-- TIMETABLE VIEW -->
+    <div id="timetable-view" class="view">
+        <div class="container" style="max-width: 95%;">
+            <button class="btn back-button" onclick="goBack()">← Go Back</button>
+            <div id="timetable-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentView = 'home-view';
+        let previousView = 'home-view';
+        let statusInterval;
+
+        function showView(viewId) {
+            previousView = currentView;
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            currentView = viewId;
+
+            if (viewId === 'admin-view') {
+                checkStatus();
+                statusInterval = setInterval(checkStatus, 2000);
+            } else {
+                clearInterval(statusInterval);
+            }
+        }
+        
+        function goBack() {
+            showView(previousView);
+        }
+
+        // --- Timetable Logic ---
+        async function showTimetableView(type) {
+            const contentDiv = document.getElementById('timetable-content');
+            contentDiv.innerHTML = '<h2>Loading Timetable...</h2>';
+            showView('timetable-view');
+            const response = await fetch(`/api/timetable/${type}`);
+            const data = await response.json();
+            if (data.found) {
+                contentDiv.innerHTML = data.html;
+            } else {
+                contentDiv.innerHTML = `<div class="container"><h1>Timetable Not Available</h1><p>The requested timetable has not been generated or published yet.</p></div>`;
+            }
+        }
+
+        // --- Login Logic ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+            
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                errorDiv.style.display = 'none';
+                showView('admin-view');
+            } else {
+                errorDiv.textContent = data.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // --- Admin Panel Logic ---
+        const generateBtn = document.getElementById('generate-btn');
+        const publishBtn = document.getElementById('publish-btn');
+        const verificationPanel = document.getElementById('verification-panel');
+        const statusText = document.getElementById('status-text');
+        const progressBar = document.getElementById('progress-bar');
+        const progressInfo = document.getElementById('progress-info');
+
+        generateBtn.addEventListener('click', async () => {
+            await fetch('/api/generate', { method: 'POST' });
+            checkStatus();
+        });
+
+        publishBtn.addEventListener('click', async () => {
+            await fetch('/api/publish', { method: 'POST' });
+            alert('Timetable Published Successfully!');
+            checkStatus();
+        });
+
+        async function checkStatus() {
+            const response = await fetch('/api/status');
+            const data = await response.json();
+
+            verificationPanel.style.display = 'none';
+            generateBtn.style.display = 'inline-block';
+
+            if (data.status === 'running') {
+                statusText.textContent = 'Generating...';
+                generateBtn.disabled = true;
+                progressBar.max = data.total;
+                progressBar.value = data.progress;
+                progressInfo.textContent = `Generation ${data.progress} of ${data.total} | Fitness: ${data.fitness}`;
+            } else if (data.status === 'pending_verification') {
+                statusText.textContent = 'Pending Verification';
+                generateBtn.disabled = false;
+                generateBtn.style.display = 'none';
+                verificationPanel.style.display = 'block';
+                progressInfo.textContent = 'A new timetable is ready for review.';
+            } else if (data.status === 'error') {
+                 statusText.textContent = 'Error!';
+                 progressInfo.textContent = data.message;
+                 generateBtn.disabled = false;
+                 clearInterval(statusInterval);
+            } else { // idle
+                statusText.textContent = 'Idle';
+                generateBtn.disabled = false;
+                progressBar.value = 0;
+                progressInfo.textContent = 'Ready to generate a new timetable.';
+            }
+        }
+
+    </script>
+
+</body>
+</html>
+

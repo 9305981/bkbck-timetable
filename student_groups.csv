@@ -1,0 +1,8 @@
+group_id,group_name,has_batches
+G01,"TYCS",yes
+G02,"SYCS",yes
+G03,"FYCS",yes
+G04,"MSCAI1",no
+G05,"MSC1",no
+G06,"SYDS",yes
+G07,"FYDS",yes

@@ -1,0 +1,15 @@
+subject_id,subject_name,weekly_hours,needs_lab
+S01,DAA,4,no
+S02,AI,4,no
+S03,CYBER PART 1,4,no
+S04,MSC PART 1,4,yes
+S05,ADBMS,4,yes
+S06,JAVA,4,yes
+S07,BC,3,yes
+S08,ENGLISH,3,no
+S09,IKS,3,no
+S10,FDA,4,no
+S11,HINDIS,3,no
+S12,PYTHON,4,yes
+S13,DE,4,yes
+S14,DBMS,4,yes
