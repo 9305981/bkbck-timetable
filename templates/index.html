@@ -33,30 +33,38 @@
         progress { width: 100%; height: 25px; margin-bottom: 10px; }
         .verification-panel { display: none; margin-top: 20px; padding: 15px; background-color: #eaf7ff; border: 1px solid #b3e0ff; border-radius: 5px; text-align: center; }
         
-        /* ⭐ FULLY CORRECTED AND ROBUST TIMETABLE STYLES ⭐ */
-        #timetable-view { justify-content: flex-start; } /* Align to top */
-        #timetable-view .container { max-width: 95%; } 
-        #timetable-view .back-button { margin-bottom: 30px; align-self: flex-start; }
+        /* ⭐ FINAL, MOBILE-RESPONSIVE TIMETABLE STYLES ⭐ */
+        #timetable-view { justify-content: flex-start; /* Align to top */ } 
+        #timetable-content-wrapper { width: 95%; max-width: 1400px; } /* New wrapper */
+        #timetable-view .back-button { margin-bottom: 20px; align-self: flex-start; }
         #timetable-content h1, #timetable-content h2 { text-align: center; }
-        #timetable-content h1 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; display: inline-block; margin-bottom: 40px;}
-        #timetable-content h2 { color: #007bff; margin-top: 40px; margin-bottom: 20px; text-transform: uppercase; }
-        .table-container { overflow-x: auto; width: 100%;}
-        #timetable-content table { border-collapse: collapse !important; width: 100% !important; min-width: 1200px !important; margin: 0 auto 50px auto !important; box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important; background-color: #fff !important; }
-        #timetable-content th, #timetable-content td { border: 1px solid #c7d8e2 !important; text-align: center !important; padding: 10px !important; vertical-align: middle !important; height: 60px !important; }
-        #timetable-content th { background-color: #e9f2f7 !important; color: #333 !important; font-weight: 600 !important; }
-        #timetable-content .slot { font-weight: bold !important; color: #555 !important; background-color: #e9f2f7 !important; min-width: 120px !important;}
-        #timetable-content .cell-content { font-size: 0.8em !important; line-height: 1.4 !important; font-weight: 500 !important; padding: 4px !important; border-radius: 4px !important; }
+        #timetable-content h1 { color: #0056b3; }
+        #timetable-content h2 { color: #007bff; text-transform: uppercase; }
+        .table-container { overflow-x: auto; width: 100%; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #timetable-content table { border-collapse: collapse; width: 100%; min-width: 1000px; }
+        #timetable-content th, #timetable-content td { border: 1px solid #c7d8e2; text-align: center; padding: 10px; vertical-align: middle; height: 60px; }
+        #timetable-content th { background-color: #e9f2f7; color: #333; font-weight: 600; }
+        #timetable-content .slot { font-weight: bold; color: #555; background-color: #e9f2f7; min-width: 110px;}
+        #timetable-content .cell-content { font-size: 0.8em; line-height: 1.4; font-weight: 500; }
     </style>
 </head>
 <body>
-    <!-- VIEWS ARE UNCHANGED -->
+
+    <!-- Home, Login, and Admin Views are unchanged -->
     <div id="home-view" class="view active"> <div class="container"> <div class="logo">BKB</div> <div class="college-name">BK Birla College, Kalyan</div> <div class="department">Department of Computer Science & IT</div> <div class="quote-box">"The future belongs to those who believe in the beauty of their dreams." <br>- Eleanor Roosevelt</div> <div class="notice"><strong>Important Notice:</strong> As per university guidelines, a minimum of **75% attendance** is mandatory in all subjects to be eligible for examinations.</div> <div class="portals"> <button class="btn btn-secondary" onclick="showView('login-view')">Faculty Login</button> <button class="btn" onclick="showTimetableView('published')">View Timetable</button> </div> <div class="footer">&copy; 2025 BK Birla College, Kalyan. AI Timetable System.</div> </div> </div>
-    <div id="login-view" class="view"> <div class="container"> <h2>Faculty Admin Login</h2> <form id="login-form" class="login-form"> <div id="login-error" class="error-msg" style="display:none;"></div> <input type="text" id="username" placeholder="Username (e.g., Arpita)" required> <input type="password" id="password" placeholder="Password" required> <button type="submit" class="btn">Login</button> </form> <button class="btn btn-secondary" onclick="showView('home-view')" style="margin-top: 20px;">← Back to Home</button> </div> </div>
+    <div id="login-view" class="view"> <div class="container"> <h2>Faculty Admin Login</h2> <form id="login-form" class="login-form"> <div id="login-error" class="error-msg" style="display:none;"></div> <input type="text" id="username" placeholder="Username" required> <input type="password" id="password" placeholder="Password" required> <button type="submit" class="btn">Login</button> </form> <button class="btn btn-secondary" onclick="showView('home-view')" style="margin-top: 20px;">← Back to Home</button> </div> </div>
     <div id="admin-view" class="view"> <div class="container"> <h1>Timetable Generator - Admin Panel</h1> <div class="status-box"> <p><strong>Status:</strong> <span id="status-text">Idle</span></p> <progress id="progress-bar" value="0" max="100"></progress> <p id="progress-info"></p> </div> <div class="portals"> <button id="generate-btn" class="btn">Generate New Timetable</button> <button class="btn btn-secondary" onclick="showTimetableView('published')">View Published</button> </div> <div id="verification-panel" class="verification-panel"> <h4>Verification Required</h4> <p>A new timetable is ready. Please review it before publishing.</p> <button class="btn btn-secondary" onclick="showTimetableView('preview')">Verify</button> <button id="publish-btn" class="btn">Publish ✔</button> </div> <button class="btn btn-secondary" onclick="showView('home-view')" style="margin-top: 20px;">Logout</button> </div> </div>
-    <div id="timetable-view" class="view"> <button class="btn back-button" onclick="goBack()">← Go Back</button> <div id="timetable-content"></div> </div>
+
+    <!-- ⭐ UPDATED TIMETABLE VIEW STRUCTURE ⭐ -->
+    <div id="timetable-view" class="view">
+        <div id="timetable-content-wrapper">
+            <button class="btn back-button" onclick="goBack()">← Go Back</button>
+            <div id="timetable-content"></div>
+        </div>
+    </div>
 
     <script>
-        // --- SCRIPT IS UNCHANGED (LOGIC IS CORRECT) ---
+        // The script logic is correct and does not need to be changed.
         let currentView = 'home-view', previousView = 'home-view', timetableData = { preview: null, published: null };
         const STAFF_CREDENTIALS = { 'Arpita': '1234', 'Sanskriti': '1222' };
         const GA_PARAMS = { POPULATION_SIZE: 150, NUM_GENERATIONS: 300, ELITISM_SIZE: 15, DAYS: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], TIME_SLOTS: ["07:15-08:15", "08:15-09:15", "09:25-10:25", "10:25-11:25", "11:35-12:35", "12:35-13:35", "13:55-14:55", "14:55-15:55"]};
@@ -73,17 +81,16 @@
                 appData.subjects_df = await fetchCSV('subjects.csv');
                 appData.student_groups_df = await fetchCSV('student_groups.csv');
                 appData.teaching_load_df = await fetchCSV('teaching_load.csv');
-                console.log("All data loaded successfully from CSVs.");
             } catch (error) {
                 console.error("Failed to load data:", error);
-                alert("Critical error: Could not load initial data. Please check the connection and CSV file paths.");
+                alert("Critical error: Could not load initial data.");
             }
         }
         function showTimetableView(type) {
             const contentDiv = document.getElementById('timetable-content');
             showView('timetable-view');
             const data = timetableData[type];
-            if (data) { contentDiv.innerHTML = generateHtmlFromTimetable(data); } else { contentDiv.innerHTML = `<div class="container"><h1>Timetable Not Available</h1><p>The requested timetable has not been generated or published yet.</p></div>`; }
+            if (data) { contentDiv.innerHTML = generateHtmlFromTimetable(data); } else { contentDiv.innerHTML = `<div class="container" style="text-align:center;"><h1>Timetable Not Available</h1><p>The requested timetable has not been generated or published yet.</p></div>`; }
         }
         function getGroupColor(group_id) { const colors = {'TYCS': '#FFDDC1', 'SYCS': '#C1DFFF', 'FYCS': '#DBC1FF','MSCAI1': '#C1FFC1', 'MSC1': '#FFFAC1', 'SYDS': '#FFC1D8', 'FYDS': '#D6F8FF'}; return colors[group_id] || '#E8E8E8'; }
         function generateHtmlFromTimetable(timetable) {
