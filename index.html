@@ -6,7 +6,7 @@
     <title>BK Birla College - Timetable System</title>
     <style>
         /* General Body and View Styles */
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f0f4f8; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; }
         .view { display: none; }
         .view.active { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
         .container { text-align: center; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 600px; width: 90%; }
@@ -33,13 +33,13 @@
         progress { width: 100%; height: 25px; margin-bottom: 10px; }
         .verification-panel { display: none; margin-top: 20px; padding: 15px; background-color: #eaf7ff; border: 1px solid #b3e0ff; border-radius: 5px; text-align: center; }
         
-        /* ⭐ RESTORED TIMETABLE STYLES ⭐ */
-        #timetable-view .container { max-width: 95%; } /* Allow timetable container to be wider */
-        .back-button { margin-bottom: 30px; }
+        /* ⭐ FULLY CORRECTED TIMETABLE STYLES ⭐ */
+        #timetable-view .container { max-width: 95%; } 
+        #timetable-view .back-button { margin-bottom: 30px; }
         #timetable-content h1, #timetable-content h2 { text-align: center; }
         #timetable-content h1 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; display: inline-block; margin-bottom: 40px;}
         #timetable-content h2 { color: #007bff; margin-top: 40px; margin-bottom: 20px; text-transform: uppercase; }
-        .table-container { overflow-x: auto; } /* Allows horizontal scrolling on small screens */
+        .table-container { overflow-x: auto; }
         #timetable-content table { border-collapse: collapse; width: 100%; min-width: 1200px; margin: 0 auto 50px auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background-color: #fff; }
         #timetable-content th, #timetable-content td { border: 1px solid #c7d8e2; text-align: center; padding: 10px; vertical-align: middle; height: 60px; }
         #timetable-content th { background-color: #e9f2f7; color: #333; font-weight: 600; }
@@ -104,7 +104,8 @@
 
     <!-- TIMETABLE VIEW -->
     <div id="timetable-view" class="view">
-        <div id="timetable-content"></div>
+        <button class="btn back-button" onclick="goBack()">← Go Back</button>
+        <div id="timetable-content" class="container"></div>
     </div>
 
     <script>
@@ -141,15 +142,12 @@
                 document.head.appendChild(script);
             });
             await papaParsePromise;
-
             const fetchCSV = async (file) => Papa.parse(await (await fetch(`/data/${file}`)).text(), { header: true, skipEmptyLines: true }).data;
-            
             appData.professors_df = await fetchCSV('professors.csv');
             appData.rooms_df = await fetchCSV('rooms.csv');
             appData.subjects_df = await fetchCSV('subjects.csv');
             appData.student_groups_df = await fetchCSV('student_groups.csv');
             appData.teaching_load_df = await fetchCSV('teaching_load.csv');
-            console.log("All data loaded from CSVs.");
         }
         
         // --- Timetable Display & Generation ---
@@ -160,11 +158,7 @@
             if (data) {
                 contentDiv.innerHTML = generateHtmlFromTimetable(data);
             } else {
-                contentDiv.innerHTML = `<div class="container">
-                    <button class="btn back-button" onclick="goBack()">← Go Back</button>
-                    <h1>Timetable Not Available</h1>
-                    <p>The requested timetable has not been generated or published yet.</p>
-                </div>`;
+                contentDiv.innerHTML = `<h1>Timetable Not Available</h1><p>The requested timetable has not been generated or published yet.</p>`;
             }
         }
         
@@ -174,10 +168,8 @@
         }
 
         function generateHtmlFromTimetable(timetable) {
-            let html = `<button class="btn back-button" onclick="goBack()">← Go Back</button>
-                        <h1>Master Timetable - BK BIRLA COLLEGE, KALYAN</h1>`;
+            let html = `<h1>Master Timetable - BK BIRLA COLLEGE, KALYAN</h1>`;
             const room_list = [...new Set(appData.rooms_df.map(r => r.room_name))].sort();
-
             GA_PARAMS.DAYS.forEach(day => {
                 html += `<h2>${day}</h2><div class="table-container"><table><tr><th>Time Slot</th>${room_list.map(r => `<th>${r}</th>`).join('')}</tr>`;
                 GA_PARAMS.TIME_SLOTS.forEach(time_slot => {
@@ -223,7 +215,6 @@
         generateBtn.addEventListener('click', () => {
             if (worker) worker.terminate();
             worker = new Worker('/static/timetable_logic.js');
-            
             worker.onmessage = (e) => {
                 if (e.data.type === 'progress') {
                     statusText.textContent = 'Generating...';
@@ -240,7 +231,6 @@
                     worker.terminate();
                 }
             };
-            
             const params = { ...GA_PARAMS, data: appData };
             worker.postMessage({ type: 'start', params: params });
         });
