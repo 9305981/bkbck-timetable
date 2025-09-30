@@ -2,7 +2,7 @@ import pandas as pd
 import random
 from collections import defaultdict
 
-# This class represents a single scheduled lecture or lab.
+# --- Data Structures (No changes needed here) ---
 class ScheduledClass:
     def __init__(self, group, subject, professor, room, time_slot, day):
         self.group = group
@@ -11,25 +11,20 @@ class ScheduledClass:
         self.room = room
         self.time_slot = time_slot
         self.day = day
-
     def __repr__(self):
-        # Defines how the object is printed to the console for debugging.
         return (f"[{self.day: <10} {self.time_slot: <12}] "
                 f"Group: {self.group['group_name']} "
                 f"Subject: {self.subject['subject_name']} "
                 f"Prof: {self.professor['initials']} "
                 f"Room: {self.room['room_name']}")
-
-# This class represents a complete timetable with its fitness score.
 class Timetable:
     def __init__(self, schedule):
         self.schedule = schedule
         self.fitness = 0.0
-
     def __repr__(self):
         return f"Timetable with {len(self.schedule)} classes and fitness {self.fitness}"
 
-# Helper function to assign consistent colors to student groups in the HTML output.
+# --- Helper functions (No changes needed here) ---
 def get_group_color(group_id):
     colors = {
         'TYCS': '#FFDDC1', 'SYCS': '#C1DFFF', 'FYCS': '#DBC1FF',
@@ -38,8 +33,8 @@ def get_group_color(group_id):
     }
     return colors.get(group_id, '#E8E8E8')
 
-# Final function to export the result to a professional-looking HTML file.
 def export_to_html(timetable, rooms, days, time_slots, filename="timetable.html"):
+    # This function remains the same
     html = f"""<html><head><title>Master Timetable - BK BIRLA COLLEGE, KALYAN</title><style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 20px; }}
     .header {{ text-align: center; margin-bottom: 30px; }}
@@ -56,12 +51,9 @@ def export_to_html(timetable, rooms, days, time_slots, filename="timetable.html"
     </style></head><body>
     <div class="header"><h1>BK BIRLA COLLEGE, KALYAN</h1></div>
     <a href="/" class="back-link">&larr; Back to Home Page</a>"""
-
     room_list = sorted(rooms['room_name'].tolist())
-
     for day in days:
-        html += f"<h2>{day}</h2>"
-        html += "<div class='table-container'><table><tr><th>Time Slot</th>"
+        html += f"<h2>{day}</h2><div class='table-container'><table><tr><th>Time Slot</th>"
         for room_name in room_list:
             html += f"<th>{room_name}</th>"
         html += "</tr>"
@@ -71,13 +63,9 @@ def export_to_html(timetable, rooms, days, time_slots, filename="timetable.html"
                 scheduled_class = next((c for c in timetable.schedule if c.day == day and c.time_slot == time_slot and c.room['room_name'] == room_name), None)
                 if scheduled_class:
                     bg_color = get_group_color(scheduled_class.group['group_id'])
-                    html += f"<td style='background-color: {bg_color};'>"
-                    html += (f"<div class='cell-content'>"
-                             f"<b>{scheduled_class.subject['subject_name']}</b><br>"
-                             f"({scheduled_class.group['group_id']})<br>"
-                             f"{scheduled_class.professor['initials']}"
-                             f"</div>")
-                    html += "</td>"
+                    html += f"<td style='background-color: {bg_color};'><div class='cell-content'>"
+                    html += f"<b>{scheduled_class.subject['subject_name']}</b><br>({scheduled_class.group['group_id']})<br>{scheduled_class.professor['initials']}"
+                    html += "</div></td>"
                 else:
                     html += "<td></td>"
             html += "</tr>"
@@ -87,7 +75,7 @@ def export_to_html(timetable, rooms, days, time_slots, filename="timetable.html"
         f.write(html)
     print(f"\n✅ Timetable data exported to {filename}")
 
-# Main function that contains the AI logic.
+# --- Main AI Engine ---
 def run_evolution(update_progress_callback, filename="timetable.html"):
     try:
         professors_df = pd.read_csv('professors.csv')
@@ -102,11 +90,12 @@ def run_evolution(update_progress_callback, filename="timetable.html"):
     DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
     TIME_SLOTS = ["07:15-08:15", "08:15-09:15", "09:25-10:25", "10:25-11:25", "11:35-12:35", "12:35-13:35", "13:55-14:55", "14:55-15:55"]
     
-    POPULATION_SIZE = 200
-    NUM_GENERATIONS = 500
-    MUTATION_RATE = 0.02
+    # ⭐ TUNED PARAMETERS FOR FASTER PERFORMANCE ⭐
+    POPULATION_SIZE = 100
+    NUM_GENERATIONS = 250 # Reduced generations
+    MUTATION_RATE = 0.05 # Slightly increased mutation to explore more solutions
     TOURNAMENT_SIZE = 5
-    ELITISM_SIZE = 20
+    ELITISM_SIZE = 10
     GAP_PENALTY = 0.1
 
     all_classes_to_schedule = []
@@ -128,18 +117,36 @@ def run_evolution(update_progress_callback, filename="timetable.html"):
             schedule.append(ScheduledClass(group, subject, professor, rooms_df.sample(n=1).iloc[0], random.choice(TIME_SLOTS), random.choice(DAYS)))
         return Timetable(schedule)
 
+    # ⭐ NEW, HYPER-OPTIMIZED FITNESS FUNCTION ⭐
     def calculate_fitness(timetable):
-        clashes = sum(1 for i in range(len(timetable.schedule)) for j in range(i + 1, len(timetable.schedule))
-                      if timetable.schedule[i].day == timetable.schedule[j].day and timetable.schedule[i].time_slot == timetable.schedule[j].time_slot
-                      and (timetable.schedule[i].professor['prof_id'] == timetable.schedule[j].professor['prof_id'] or
-                           timetable.schedule[i].group['group_id'] == timetable.schedule[j].group['group_id'] or
-                           timetable.schedule[i].room['room_id'] == timetable.schedule[j].room['room_id']))
+        clashes = 0
+        occupied_slots = defaultdict(lambda: {'professors': set(), 'groups': set(), 'rooms': set()})
+        
+        for cls in timetable.schedule:
+            slot_key = (cls.day, cls.time_slot)
+            slot_info = occupied_slots[slot_key]
+
+            # Check for hard clashes by attempting to add resources to the slot
+            if cls.professor['prof_id'] in slot_info['professors']:
+                clashes += 1
+            slot_info['professors'].add(cls.professor['prof_id'])
+
+            if cls.group['group_id'] in slot_info['groups']:
+                clashes += 1
+            slot_info['groups'].add(cls.group['group_id'])
+
+            if cls.room['room_id'] in slot_info['rooms']:
+                clashes += 1
+            slot_info['rooms'].add(cls.room['room_id'])
+            
+        # Soft constraint for gaps (same as before)
         daily_schedules = defaultdict(list)
         for cls in timetable.schedule: daily_schedules[(cls.group['group_id'], cls.day)].append(cls.time_slot)
         gap_penalties = sum((max_ts - min_ts + 1) - len(time_indices)
                             for time_slots in daily_schedules.values()
                             if (time_indices := sorted([TIME_SLOTS.index(ts) for ts in time_slots]))
                             and (min_ts := time_indices[0]) is not None and (max_ts := time_indices[-1]) is not None)
+        
         return 1.0 / (1.0 + clashes + gap_penalties * GAP_PENALTY)
 
     def select_parent(population):
@@ -175,6 +182,7 @@ def run_evolution(update_progress_callback, filename="timetable.html"):
     export_to_html(best_timetable, rooms_df, DAYS, TIME_SLOTS, filename)
     return True
 
+# This block allows the script to be run directly for testing.
 if __name__ == "__main__":
     print("Running timetable logic directly for testing...")
     def print_progress(gen, total_gen, fitness, error=None):
@@ -184,4 +192,3 @@ if __name__ == "__main__":
         print(f"Generation {gen}/{total_gen} | Best Fitness: {fitness:.4f}")
     
     run_evolution(print_progress)
-
